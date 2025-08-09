@@ -11,20 +11,24 @@ COPY web/. .
 RUN pnpm build   # 产物在 /app/web/dist
 
 # ---------- 2) Build backend ----------
-FROM golang:1.23-bookworm AS backend
+FROM golang:1.24-bookworm AS backend
 WORKDIR /src
-# 先下依赖
+
+# 先下依赖（开详细日志 & 设代理，失败能看清卡在哪个模块）
 COPY go.mod go.sum ./
-RUN go mod download
-# 拷全部后端源码
+RUN go env -w GOPROXY=https://proxy.golang.org,direct \
+    && go env -w GONOSUMDB="*" \
+    && go mod download -x
+
+# 拷全部源码
 COPY . .
-# 覆盖前端产物（给 go:embed 用）
+# 覆盖前端产物
 COPY --from=frontend /app/web/dist ./web/dist
-# 适配多架构构建（buildx 会注入这两个 ARG）
+
+# 多架构编译
 ARG TARGETOS
 ARG TARGETARCH
 ENV CGO_ENABLED=0
-# -s -w 压缩符号表；适配不同架构
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /out/memos ./bin/memos
 
 # ---------- 3) Runtime ----------
