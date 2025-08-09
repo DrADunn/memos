@@ -24,8 +24,10 @@ RUN go env -w GOPROXY=https://proxy.golang.org,direct \
 
 # 拷全部源码
 COPY . .
-# 覆盖前端产物
-COPY --from=frontend /app/web/dist ./web/dist
+# 覆盖前端产物（给 go:embed 用，目标是 server/frontend/dist）
+COPY --from=frontend /app/web/dist ./server/frontend/dist
+# 可选：构建期校验，避免再次空包
+RUN test -f ./server/frontend/dist/index.html && echo "frontend embedded OK"
 
 # 多架构编译
 ARG TARGETOS
