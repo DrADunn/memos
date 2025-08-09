@@ -1,1 +1,9 @@
+.git
+.github
+node_modules
 web/node_modules
+web/.next
+dist
+build
+tmp
+.DS_Store
