@@ -35,7 +35,7 @@ RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /out/memos ./
 
 # ---------- 3) Runtime ----------
 # 用 distroless 带CA证书的精简镜像；非root运行
-FROM gcr.io/distroless/base-debian12:nonroot
+FROM gcr.io/distroless/base-debian12
 WORKDIR /var/opt/memos
 COPY --from=backend /out/memos /usr/local/bin/memos
 EXPOSE 5230
