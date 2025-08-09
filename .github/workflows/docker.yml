@@ -8,8 +8,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -20,9 +24,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push
+      - name: Build and Push (multi-arch)
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: ./Dockerfile
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: dradun/memos:latest
+          cache-from: type=registry,ref=dradun/memos:buildcache
+          cache-to: type=registry,ref=dradun/memos:buildcache,mode=max
