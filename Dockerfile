@@ -6,6 +6,8 @@ COPY web/pnpm-lock.yaml web/package.json ./
 # 让 Corepack 使用 package.json 指定的 pnpm 版本（不要手动 prepare 8.x）
 RUN corepack enable
 RUN pnpm --version
+# 安装依赖
+RUN pnpm install --frozen-lockfile
 # 拷其余前端源码并构建
 COPY web/. .
 RUN pnpm build   # 产物在 /app/web/dist
