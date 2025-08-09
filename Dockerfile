@@ -3,9 +3,9 @@ FROM node:22-bookworm AS frontend
 WORKDIR /app/web
 # 只拷依赖清单，先装依赖以利用缓存
 COPY web/pnpm-lock.yaml web/package.json ./
-# 使用 corepack 管理 pnpm；锁定一个稳定版，避免CI环境差异
-RUN corepack enable && corepack prepare pnpm@8.15.4 --activate
-RUN pnpm install --frozen-lockfile
+# 让 Corepack 使用 package.json 指定的 pnpm 版本（不要手动 prepare 8.x）
+RUN corepack enable
+RUN pnpm --version
 # 拷其余前端源码并构建
 COPY web/. .
 RUN pnpm build   # 产物在 /app/web/dist
