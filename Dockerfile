@@ -33,11 +33,13 @@ ARG TARGETARCH
 ENV CGO_ENABLED=0
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /out/memos ./bin/memos
 
-# ---------- 3) Runtime ----------
-# 用 distroless 带CA证书的精简镜像；非root运行
-FROM gcr.io/distroless/base-debian12
+# ---------- 3) Runtime (debug-friendly) ----------
+FROM debian:bookworm-slim
 WORKDIR /var/opt/memos
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
 COPY --from=backend /out/memos /usr/local/bin/memos
 EXPOSE 5230
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s CMD curl -fsS http://127.0.0.1:5230/api/ping || exit 1
 VOLUME ["/var/opt/memos"]
 ENTRYPOINT ["/usr/local/bin/memos"]
+
