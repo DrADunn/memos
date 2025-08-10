@@ -7,19 +7,22 @@ COPY web/. .
 RUN pnpm build  # 产物在 /src/web/dist
 
 # ---------- 2) Build backend ----------
-FROM golang:1.24-alpine AS build
+FROM golang:1.24-bookworm AS backend
 WORKDIR /src
 COPY go.mod go.sum ./
-RUN go mod download
+RUN go mod download -x
 COPY . .
-# 把前端产物放到 Go 代码期望的目录，供 go:embed 收集
-RUN mkdir -p server/frontend/dist
-COPY --from=web /src/web/dist ./server/frontend/dist
 
-# 用官方推荐的入口编译（注意带 main.go）
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    go build -ldflags="-s -w" -o /out/memos ./bin/memos/main.go
+# ✅ 把前端产物放到 go:embed 期望的目录
+COPY --from=frontend /app/web/dist ./server/router/frontend/dist
+# （可选）构建期断言，防止空包
+RUN test -f ./server/router/frontend/dist/index.html && echo "frontend embedded OK"
+
+# ✅ 编译时加 embed 标签
+ARG TARGETOS TARGETARCH
+ENV CGO_ENABLED=0
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH \
+    go build -tags=embed -ldflags="-s -w" -o /out/memos ./bin/memos/main.go
 
 # ---------- 3) Runtime ----------
 FROM gcr.io/distroless/base-debian12
