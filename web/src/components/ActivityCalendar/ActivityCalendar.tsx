@@ -52,7 +52,11 @@ const CalendarCell = memo(
 
     if (!dayInfo.isCurrentMonth) {
       return (
-        <div className={cn("w-6 h-6 text-xs lg:text-[13px] flex justify-center items-center cursor-default opacity-60 text-muted-foreground")}>
+        <div
+          className={cn(
+            "w-6 h-6 text-xs lg:text-[13px] flex justify-center items-center cursor-default opacity-60 text-muted-foreground",
+          )}
+        >
           {dayInfo.day}
         </div>
       );
@@ -111,12 +115,23 @@ export const ActivityCalendar = memo(
       const yearValue = dayjs(monthStr).toDate().getFullYear();
       const monthValue = dayjs(monthStr).toDate().getMonth();
       const dayInMonth = new Date(yearValue, monthValue + 1, 0).getDate();
-      const firstDay = (((new Date(yearValue, monthValue, 1).getDay() - weekStartDayOffset) % 7) + 7) % 7;
+      const firstDay =
+        (((new Date(yearValue, monthValue, 1).getDay() - weekStartDayOffset) % 7) + 7) % 7;
       const lastDay = new Date(yearValue, monthValue, dayInMonth).getDay() - weekStartDayOffset;
       const prevMonthDays = new Date(yearValue, monthValue, 0).getDate();
 
-      const WEEK_DAYS = [t("days.sun"), t("days.mon"), t("days.tue"), t("days.wed"), t("days.thu"), t("days.fri"), t("days.sat")];
-      const weekDaysOrdered = WEEK_DAYS.slice(weekStartDayOffset).concat(WEEK_DAYS.slice(0, weekStartDayOffset));
+      const WEEK_DAYS = [
+        t("days.sun"),
+        t("days.mon"),
+        t("days.tue"),
+        t("days.wed"),
+        t("days.thu"),
+        t("days.fri"),
+        t("days.sat"),
+      ];
+      const weekDaysOrdered = WEEK_DAYS.slice(weekStartDayOffset).concat(
+        WEEK_DAYS.slice(0, weekStartDayOffset),
+      );
 
       const daysArray: CalendarDay[] = [];
 
@@ -148,12 +163,18 @@ export const ActivityCalendar = memo(
     }, [monthStr, effectiveData, weekStartDayOffset, t]);
 
     const today = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
-    const selectedDateFormatted = useMemo(() => dayjs(props.selectedDate).format("YYYY-MM-DD"), [props.selectedDate]);
+    const selectedDateFormatted = useMemo(
+      () => dayjs(props.selectedDate).format("YYYY-MM-DD"),
+      [props.selectedDate],
+    );
 
     return (
       <div className={cn("w-full h-auto shrink-0 grid grid-cols-7 grid-flow-row gap-1")}>
         {weekDays.map((day, index) => (
-          <div key={index} className={cn("w-6 h-5 text-xs flex justify-center items-center cursor-default opacity-60")}>
+          <div
+            key={index}
+            className={cn("w-6 h-5 text-xs flex justify-center items-center cursor-default opacity-60")}
+          >
             {day}
           </div>
         ))}
