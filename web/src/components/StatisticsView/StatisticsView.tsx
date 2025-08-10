@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import { CheckCircleIcon, Code2Icon, LinkIcon, ListTodoIcon, BookmarkIcon } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { matchPath, useLocation } from "react-router-dom";
+import { matchPath, useLocation, useNavigate } from "react-router-dom";
 import { memoServiceClient } from "@/grpcweb";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useStatisticsData } from "@/hooks/useStatisticsData";
@@ -101,10 +101,14 @@ const StatisticsView = observer(() => {
     return activityStats;
   }, [monthMemos, activityStats]);
 
+  const navigate = useNavigate();
+
   const handleCalendarClick = useCallback((date: string) => {
     memoFilterStore.removeFilter((f) => f.factor === "displayTime");
     memoFilterStore.addFilter({ factor: "displayTime", value: date });
-  }, []);
+    navigate(Routes.ROOT); // 关键：回到首页列表，列表才会按日期+标签生效
+  }, [navigate]);
+
 
   const handleFilterClick = useCallback((factor: FilterFactor, value: string = "") => {
     memoFilterStore.addFilter({ factor, value });
