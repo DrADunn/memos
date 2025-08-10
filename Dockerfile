@@ -1,47 +1,30 @@
 # ---------- 1) Build frontend ----------
-FROM node:22-bookworm AS frontend
-WORKDIR /app/web
-# 只拷依赖清单，先装依赖以利用缓存
+FROM node:22-alpine AS web
+WORKDIR /src/web
 COPY web/pnpm-lock.yaml web/package.json ./
-# 让 Corepack 使用 package.json 指定的 pnpm 版本（不要手动 prepare 8.x）
-RUN corepack enable
-RUN pnpm --version
-# 安装依赖
-RUN pnpm install --frozen-lockfile
-# 拷其余前端源码并构建
+RUN corepack enable && pnpm install --frozen-lockfile
 COPY web/. .
-RUN pnpm build   # 产物在 /app/web/dist
+RUN pnpm build  # 产物在 /src/web/dist
 
 # ---------- 2) Build backend ----------
-FROM golang:1.24-bookworm AS backend
+FROM golang:1.24-alpine AS build
 WORKDIR /src
-
-# 先下依赖（开详细日志 & 设代理，失败能看清卡在哪个模块）
 COPY go.mod go.sum ./
-RUN go env -w GOPROXY=https://proxy.golang.org,direct \
-    && go env -w GONOSUMDB="*" \
-    && go mod download -x
-
-# 拷全部源码
+RUN go mod download
 COPY . .
-# 覆盖前端产物（给 go:embed 用，目标是 server/frontend/dist）
-COPY --from=frontend /app/web/dist ./server/frontend/dist
-# 可选：构建期校验，避免再次空包
-RUN test -f ./server/frontend/dist/index.html && echo "frontend embedded OK"
+# 把前端产物放到 Go 代码期望的目录，供 go:embed 收集
+RUN mkdir -p server/frontend/dist
+COPY --from=web /src/web/dist ./server/frontend/dist
 
-# 多架构编译
-ARG TARGETOS
-ARG TARGETARCH
-ENV CGO_ENABLED=0
-RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /out/memos ./bin/memos
+# 用官方推荐的入口编译（注意带 main.go）
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go build -ldflags="-s -w" -o /out/memos ./bin/memos/main.go
 
-# ---------- 3) Runtime (debug-friendly) ----------
-FROM debian:bookworm-slim
+# ---------- 3) Runtime ----------
+FROM gcr.io/distroless/base-debian12
 WORKDIR /var/opt/memos
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
-COPY --from=backend /out/memos /usr/local/bin/memos
+COPY --from=build /out/memos /usr/local/bin/memos
 EXPOSE 5230
-HEALTHCHECK --interval=15s --timeout=5s --start-period=10s CMD curl -fsS http://127.0.0.1:5230/api/ping || exit 1
 VOLUME ["/var/opt/memos"]
 ENTRYPOINT ["/usr/local/bin/memos"]
-
