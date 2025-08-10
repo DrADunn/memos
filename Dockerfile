@@ -33,3 +33,4 @@ EXPOSE 5230
 VOLUME ["/var/opt/memos"]
 ENTRYPOINT ["/usr/local/bin/memos"]
 
+
