@@ -2,7 +2,9 @@ name: Build and Push Docker (Docker Hub)
 
 on:
   push:
-    branches: [ main ]
+    #branches: [ main ]
+    paths:
+      - 'Dockerfile'
   workflow_dispatch:
 
 jobs:
