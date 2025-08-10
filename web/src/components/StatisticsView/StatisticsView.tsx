@@ -2,8 +2,6 @@ import dayjs from "dayjs";
 import { CheckCircleIcon, Code2Icon, LinkIcon, ListTodoIcon, BookmarkIcon } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { memoServiceClient } from "@/grpcweb";
-import { extractUserIdFromName } from "@/store/common";
 import { matchPath, useLocation } from "react-router-dom";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useStatisticsData } from "@/hooks/useStatisticsData";
@@ -14,6 +12,8 @@ import { useTranslate } from "@/utils/i18n";
 import ActivityCalendar from "../ActivityCalendar";
 import { MonthNavigator } from "./MonthNavigator";
 import { StatCard } from "./StatCard";
+import { memoServiceClient } from "@/grpcweb";
+import { extractUserIdFromName } from "@/store/common";
 
 function countsByDate(memos: any[]): Record<string, number> {
   const map: Record<string, number> = {};
@@ -29,15 +29,18 @@ function countsByDate(memos: any[]): Record<string, number> {
   return map;
 }
 
-function buildFilterConds(userName: string, monthStr: string): string[] {
+function buildConditions(
+  userName: string,
+  monthStr: string,
+  filters: Array<{ factor: string; value?: string }>,
+): string[] {
   const uid = extractUserIdFromName(userName);
   const start = dayjs(monthStr).startOf("month").toISOString();
   const end = dayjs(monthStr).endOf("month").toISOString();
   const conds: string[] = [`creator_id == ${uid}`, `display_time >= "${start}"`, `display_time <= "${end}"`];
 
-  const filters = (memoFilterStore as any)?.state?.filters ?? [];
-  for (const f of filters as Array<{ factor: string; value?: string }>) {
-    switch (f.factor) {
+  for (const f of filters) {
+    switch (f.factor as FilterFactor | string) {
       case "pinned":
         conds.push(`pinned == true`);
         break;
@@ -55,7 +58,6 @@ function buildFilterConds(userName: string, monthStr: string): string[] {
         if (f.value) conds.push(`tag == "${f.value}"`);
         break;
       case "displayTime":
-        // 单日点击由 onClick 处理，这里只做整月
         break;
       default:
         break;
@@ -71,18 +73,37 @@ const StatisticsView = observer(() => {
   const { memoTypeStats, activityStats } = useStatisticsData();
   const [selectedDate] = useState(new Date());
   const [visibleMonthString, setVisibleMonthString] = useState(dayjs().format("YYYY-MM"));
+
+  const filters = useMemo(() => {
+    return (
+      ((memoFilterStore as any)?.state?.filters as Array<{ factor: string; value?: string }>) ??
+      ((memoFilterStore as any)?.getState?.()?.filters as Array<{ factor: string; value?: string }>) ??
+      []
+    );
+  }, [
+    (memoFilterStore as any)?.state?.filters,
+    (memoFilterStore as any)?.getState?.()?.filters,
+  ]);
+
+  const filtersKey = useMemo(() => {
+    try {
+      return JSON.stringify(filters);
+    } catch {
+      return "[]";
+    }
+  }, [filters]);
+
   const [monthMemos, setMonthMemos] = useState<any[] | null>(null);
 
   useEffect(() => {
     if (!currentUser?.name) return;
-    const conds = buildFilterConds(currentUser.name, visibleMonthString);
+    const conds = buildConditions(currentUser.name, visibleMonthString, filters);
     memoServiceClient
       .listMemos({ filter: conds.join(" && "), pageSize: 1000 })
       .then(({ memos }) => setMonthMemos(memos || []))
       .catch(() => setMonthMemos(null));
-    // 依赖里加入筛选集合的快照，保证筛选变化时重拉
-  }, [currentUser?.name, visibleMonthString, useMemo(() => JSON.stringify((memoFilterStore as any)?.state?.filters ?? []), [(memoFilterStore as any)?.state?.filters])]);
-  
+  }, [currentUser?.name, visibleMonthString, filtersKey]);
+
   const calendarData: Record<string, number> = useMemo(() => {
     if (Array.isArray(monthMemos)) return countsByDate(monthMemos);
     return activityStats;
