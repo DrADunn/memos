@@ -29,11 +29,7 @@ function countsByDate(memos: any[]): Record<string, number> {
   return map;
 }
 
-function buildConditions(
-  userName: string,
-  monthStr: string,
-  filters: Array<{ factor: string; value?: string }>,
-): string[] {
+function buildConditions(userName: string, monthStr: string, filters: Array<{ factor: string; value?: string }>): string[] {
   const uid = extractUserIdFromName(userName);
   const start = dayjs(monthStr).startOf("month").toISOString();
   const end = dayjs(monthStr).endOf("month").toISOString();
@@ -79,10 +75,7 @@ const StatisticsView = observer(() => {
       ((memoFilterStore as any)?.getState?.()?.filters as Array<{ factor: string; value?: string }>) ??
       []
     );
-  }, [
-    (memoFilterStore as any)?.state?.filters,
-    (memoFilterStore as any)?.getState?.()?.filters,
-  ]);
+  }, [(memoFilterStore as any)?.state?.filters, (memoFilterStore as any)?.getState?.()?.filters]);
 
   const filtersKey = useMemo(() => {
     try {
