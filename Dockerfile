@@ -32,3 +32,4 @@ COPY --from=build /out/memos /usr/local/bin/memos
 EXPOSE 5230
 VOLUME ["/var/opt/memos"]
 ENTRYPOINT ["/usr/local/bin/memos"]
+
